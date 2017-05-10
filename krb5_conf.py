@@ -4,6 +4,12 @@ import re
 import os
 import sys
 
+STANZA_SECTIONS = ["realms", "capaths", "appdefaults", "plugins", # krb5.conf
+                   "dbmodules"] # kdc
+FLAT_SECTIONS = ["libdefaults", "domain_realm", # krb5.conf
+                 "kdcdefaults", "dbdefaults", "dbmodules", "logging"] # kdc
+ALL_SECTIONS = STANZA_SECTIONS + FLAT_SECTIONS
+
 def error(s, prefix):
     print("%s: %s" % (prefix, s), file=sys.stderr)
     return
@@ -13,11 +19,7 @@ def by_section(lines, prefix):
 
     while len(lines) > 0:
         m = re.match(r"\[(.*)\]", lines[0])
-        if m == None \
-           or m.group(1) not in ["libdefaults", "realms", "domain_realm",
-                                 "capaths", "appdefaults", "plugins",
-                                 "kdcdefaults", "realms", "dbdefaults", # kdc
-                                 "dbmodules", "logging"]: # kdc
+        if m == None or m.group(1) not in ALL_SECTIONS:
             error("malformed section header %s" % lines[0], prefix)
             exit(1)
         elif m.group(1) in secs.keys():
@@ -94,6 +96,49 @@ def get_clean_contents(f, prefix=None):
         pass
     return secs
 
+def first_level(lines):
+    tup_list = []
+    for line in lines:
+        m = re.match("(.*?)\s*=\s*(.*)", line)
+        if m is None:
+            error("malformed assignment: " + line, "(parsing)")
+            exit(1)
+
+        tup_list.append((m.group(1), m.group(2)))
+        pass
+    return tup_list
+
+def second_level(lines):
+    secs = {}
+
+    while len(lines) > 0:
+        m = re.match("(.*?)\s*=\s*{", lines[0])
+        if m is None:
+            error("unexpected malformed stanza: " + lines[0], "(parsing)")
+            exit(1)
+
+        del(lines[0])
+        attrs = []
+        while lines[0] != "}":
+            attrs.append(lines[0])
+            del(lines[0])
+            pass
+
+        secs[m.group(1)] = first_level(attrs)
+        del(lines[0])
+        pass
+    return secs
+
+def parse(f):
+    sections = get_clean_contents(f)
+    for s in sections.keys():
+        if s in STANZA_SECTIONS:
+            sections[s] = second_level(sections[s])
+            continue
+        sections[s] = first_level(sections[s])
+        pass
+    return sections
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not os.path.exists(sys.argv[1]):
         print("Usage: %s [file [file ...]]" % sys.argv[0])
@@ -104,7 +149,7 @@ if __name__ == "__main__":
     files = ["/etc/krb5.conf"] if len(sys.argv) == 1 else sys.argv[1:]
 
     for f in files:
-        sections = get_clean_contents(f)
+        sections = parse(f)
         for k in sections.keys():
             print("%s: %s\n" % (k, sections[k]))
             pass
