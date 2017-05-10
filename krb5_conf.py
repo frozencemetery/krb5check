@@ -151,19 +151,49 @@ def parse(f):
         pass
     return sections
 
+def pretty_print(secs):
+    for sec in secs.keys():
+        print("[%s]" % sec)
+
+        if sec in FLAT_SECTIONS:
+            flat = secs[sec]
+            for left in sorted(flat.keys()):
+                print("    %s = %s" % (left, flat[left]))
+                pass
+            print("")
+            continue
+
+        blocks = secs[sec]
+        for header in secs[sec].keys():
+            print("    %s = {" % header)
+
+            stanza = blocks[header]
+            for left in sorted(blocks[header].keys()):
+                for right in stanza[left]:
+                    print("        %s = %s" % (left, right))
+                    pass
+                pass
+
+            print("    }")
+            pass
+
+        print("")
+        pass
+    return
+
+######
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not os.path.exists(sys.argv[1]):
         print("Usage: %s [file [file ...]]" % sys.argv[0])
         print("")
-        print("Check krb5 configuration (defaults to /etc/krb5.conf)")
+        print("Verify and pretty-print krb5 configuration")
+        print("By default, checks /etc/krb5.conf")
         exit(1)
 
     files = ["/etc/krb5.conf"] if len(sys.argv) == 1 else sys.argv[1:]
 
     for f in files:
-        sections = parse(f)
-        for k in sections.keys():
-            print("%s: %s\n" % (k, sections[k]))
-            pass
+        pretty_print(parse(f))
         pass
     exit(0)
