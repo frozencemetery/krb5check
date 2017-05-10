@@ -77,7 +77,8 @@ def get_clean_contents(f, prefix=None):
                    and re.search("[^a-zA-Z0-9_-]", nf) is not None:
                     return error("file ignored by libkrb5: " + nf, prefix)
 
-                extra.append(get_clean_contents(path + "/" + nf, prefix))
+                nf = os.path.join(path, nf)
+                extra.append(get_clean_contents(nf, prefix))
                 pass
             pass
         else:
