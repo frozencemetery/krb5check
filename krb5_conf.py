@@ -11,6 +11,18 @@ FLAT_SECTIONS = ["libdefaults", "domain_realm", # krb5.conf
                  "kdcdefaults", "dbdefaults", "dbmodules", "logging"] # kdc
 ALL_SECTIONS = STANZA_SECTIONS + FLAT_SECTIONS
 
+NONBROKEN_ENCTYPES = [
+    "des3-cbc-sha1", "des3-hmac-sha1", "des3-cbc-sha1-kd",
+    "aes256-cts-hmac-sha1-96", "aes256-cts", "aes256-sha1",
+    "aes128-cts-hmac-sha1-96", "aes128-cts", "aes128-sha1",
+    "aes256-cts-hmac-sha384-192", "aes256-sha2",
+    "aes128-cts-hmac-sha256-128", "aes128-sha2",
+    "arcfour-hmac", "rc4-hmac", "arcfour-hmac-md5",
+    "camellia256-cts-cmac", "camellia256-cts",
+    "camellia128-cts-cmac", "camellia128-cts",
+    "des3", "aes", "rc4", "camellia"
+]
+
 def error(s, prefix):
     print("%s: %s" % (prefix, s), file=sys.stderr)
     return exit(1)
@@ -151,6 +163,30 @@ def parse(f):
         pass
     return sections
 
+def check(secs):
+    libdefaults = secs.get("libdefaults")
+    if libdefaults is None:
+        return error("missing libdefaults section", "(checks)")
+
+    permitted_enctypes = libdefaults.get("permitted_enctypes")
+    if permitted_enctypes is None:
+        return error("permitted_enctypes not specified", "libdefaults")
+    for enctype in permitted_enctypes.split():
+        if enctype not in NONBROKEN_ENCTYPES:
+            return error("bad enctype: %s", "libdefaults")
+        continue
+
+    pkinit_dh_min_bits = libdefaults.get("pkinit_dh_min_bits")
+    if pkinit_dh_min_bits is not None:
+        pkinit_dh_min_bits = int(pkinit_dh_min_bits)
+        if pkinit_dh_min_bits < 2048:
+            return error("pkinit_dh_min_bits set lower than default",
+                         "libdefaults")
+        elif pkinit_dh_min_bits % 2048 != 0:
+            return error("bad value for pkinit_dh_min_bits", "libdefaults")
+        pass
+    return
+
 def pretty_print(secs):
     for sec in secs.keys():
         print("[%s]" % sec)
@@ -194,6 +230,8 @@ if __name__ == "__main__":
     files = ["/etc/krb5.conf"] if len(sys.argv) == 1 else sys.argv[1:]
 
     for f in files:
-        pretty_print(parse(f))
+        out = parse(f)
+        check(out)
+        pretty_print(out)
         pass
     exit(0)
