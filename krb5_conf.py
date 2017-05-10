@@ -20,9 +20,10 @@ def by_section(lines, prefix):
     while len(lines) > 0:
         m = re.match(r"\[(.*)\]", lines[0])
         if m == None or m.group(1) not in ALL_SECTIONS:
-            return error("malformed section header %s" % lines[0], prefix)
+            return error("malformed/missing section header: " +lines[0],
+                         prefix)
         elif m.group(1) in secs.keys():
-            return error("duplicate section header %s" % m.group(1), prefix)
+            return error("duplicate section header: " + m.group(1), prefix)
 
         values = []
         del(lines[0])
@@ -63,7 +64,7 @@ def get_clean_contents(f, prefix=None):
 
     extra = []
     while lines[0].startswith("include"):
-        m = re.match("(include|includedir)\s(.*)", lines[0])
+        m = re.match("(include|includedir)\s+(.*)", lines[0])
         verb = m.group(1)
         path = m.group(2).strip()
 
@@ -74,13 +75,13 @@ def get_clean_contents(f, prefix=None):
             for nf in os.listdir(path):
                 if not nf.endswith(".conf") \
                    and re.search("[^a-zA-Z0-9_-]", nf) is not None:
-                    return error("File ignored by libkrb5: %s" % nf, prefix)
+                    return error("file ignored by libkrb5: " + nf, prefix)
 
                 extra.append(get_clean_contents(path + "/" + nf, prefix))
                 pass
             pass
         else:
-            return error("unrecognized include directive '%s'" % verb, prefix)
+            return error("unrecognized include directive: " + verb, prefix)
 
         del(lines[0])
         pass
