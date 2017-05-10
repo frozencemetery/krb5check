@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from collections import defaultdict
 import re
 import os
 import sys
@@ -119,10 +120,26 @@ def second_level(lines):
             del(lines[0])
             pass
 
-        secs[m.group(1)] = first_level(attrs)
+        secs[m.group(1)] = to_dict(first_level(attrs), True)
         del(lines[0])
         pass
     return secs
+
+def to_dict(tuplist, dups_okay=False):
+    d = defaultdict(list) if dups_okay else {}
+
+    for (k, v) in tuplist:
+        if dups_okay:
+            d[k] += [v]
+            continue
+        elif k in d:
+            print(tuplist)
+            return error("duplicate assignment: " + k, "(parsing)")
+        d[k] = v
+        pass
+
+    # convert to regular dict for display purposes
+    return dict(d)
 
 def parse(f):
     sections = get_clean_contents(f)
@@ -130,7 +147,7 @@ def parse(f):
         if s in STANZA_SECTIONS:
             sections[s] = second_level(sections[s])
             continue
-        sections[s] = first_level(sections[s])
+        sections[s] = to_dict(first_level(sections[s]))
         pass
     return sections
 
