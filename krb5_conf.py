@@ -12,7 +12,7 @@ ALL_SECTIONS = STANZA_SECTIONS + FLAT_SECTIONS
 
 def error(s, prefix):
     print("%s: %s" % (prefix, s), file=sys.stderr)
-    return
+    return exit(1)
 
 def by_section(lines, prefix):
     secs = {}
@@ -20,11 +20,9 @@ def by_section(lines, prefix):
     while len(lines) > 0:
         m = re.match(r"\[(.*)\]", lines[0])
         if m == None or m.group(1) not in ALL_SECTIONS:
-            error("malformed section header %s" % lines[0], prefix)
-            exit(1)
+            return error("malformed section header %s" % lines[0], prefix)
         elif m.group(1) in secs.keys():
-            error("duplicate section header %s" % m.group(1), prefix)
-            exit(1)
+            return error("duplicate section header %s" % m.group(1), prefix)
 
         values = []
         del(lines[0])
@@ -57,8 +55,7 @@ def get_clean_contents(f, prefix=None):
         data = open(f, "r").read()
         pass
     except Exception as e:
-        error(e, prefix)
-        exit(1)
+        return error(e, prefix)
 
     lines = data.replace("\r\n", "\n").split("\n")
     lines = [line.strip() for line in lines
@@ -77,15 +74,13 @@ def get_clean_contents(f, prefix=None):
             for nf in os.listdir(path):
                 if not nf.endswith(".conf") \
                    and re.search("[^a-zA-Z0-9_-]", nf) is not None:
-                    error("File is ignored by libkrb5: %s" % nf, prefix)
-                    exit(1)
+                    return error("File ignored by libkrb5: %s" % nf, prefix)
 
                 extra.append(get_clean_contents(path + "/" + nf, prefix))
                 pass
             pass
         else:
-            error("unrecognized include directive '%s'" % verb, prefix)
-            exit(1)
+            return error("unrecognized include directive '%s'" % verb, prefix)
 
         del(lines[0])
         pass
@@ -101,8 +96,7 @@ def first_level(lines):
     for line in lines:
         m = re.match("(.*?)\s*=\s*(.*)", line)
         if m is None:
-            error("malformed assignment: " + line, "(parsing)")
-            exit(1)
+            return error("malformed assignment: " + line, "(parsing)")
 
         tup_list.append((m.group(1), m.group(2)))
         pass
@@ -114,8 +108,7 @@ def second_level(lines):
     while len(lines) > 0:
         m = re.match("(.*?)\s*=\s*{", lines[0])
         if m is None:
-            error("unexpected malformed stanza: " + lines[0], "(parsing)")
-            exit(1)
+            return error("malformed stanza: " + lines[0], "(parsing)")
 
         del(lines[0])
         attrs = []
