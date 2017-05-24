@@ -3,6 +3,7 @@
 from collections import defaultdict
 import re
 import os
+import subprocess
 import sys
 
 STANZA_SECTIONS = ["realms", "capaths", "appdefaults", "plugins", # krb5.conf
@@ -22,6 +23,8 @@ NONBROKEN_ENCTYPES = [
     "camellia128-cts-cmac", "camellia128-cts",
     "des3", "aes", "rc4", "camellia"
 ]
+
+min_ver = None
 
 def error(s, prefix):
     print("%s: %s" % (prefix, s), file=sys.stderr)
@@ -163,6 +166,40 @@ def parse(f):
         pass
     return sections
 
+def krb5_min_ver():
+    global min_ver
+    if min_ver != None:
+        return min_ver
+
+    # Try krb5-config
+    ret, res = subprocess.getstatusoutput("krb5-config --version")
+    if ret == 0:
+        res = res.strip()
+        min_ver = int(res.split(".")[1])
+        return min_ver
+
+    print("krb5-config not found; falling back...")
+
+    # Fallback to RPM
+    ret, res = subprocess.getstatusoutput(
+        "rpm -q --qf '%{VERSION}' krb5-libs")
+    if ret == 0:
+        res = res.strip()
+        min_ver = int(res.split(".")[1])
+        return min_ver
+
+    print("not an RPM system; falling back...")
+
+    # Fallback to APT
+    ret, res = subprocess.getstatusoutput("apt show libkrb5-3")
+    if ret == 0:
+        res = res.strip()
+        res = [l for l in res.split("\n") if l.startswith("Version: ")][0]
+        min_ver = int(res.split("-")[0].split(".")[1]) # 1.15-3, e.g.
+        return min_ver
+
+    return error("Couldn't get krb5 version!", "(internal)")
+
 def check(secs):
     libdefaults = secs.get("libdefaults")
     if libdefaults is None:
@@ -173,7 +210,11 @@ def check(secs):
         return error("permitted_enctypes not specified", "libdefaults")
     for enctype in permitted_enctypes.split():
         if enctype not in NONBROKEN_ENCTYPES:
-            return error("bad enctype: %s", "libdefaults")
+            return error("bad enctype: " + enctype, "libdefaults")
+        if krb5_min_ver() < 15 and \
+           enctype in ["aes256-cts-hmac-sha384-192", "aes256-sha2",
+                       "aes128-cts-hmac-sha256-128", "aes128-sha2"]:
+            return error("enctype too new: " + enctype, "libdefaults")
         continue
 
     pkinit_dh_min_bits = libdefaults.get("pkinit_dh_min_bits")
