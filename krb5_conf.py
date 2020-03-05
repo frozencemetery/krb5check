@@ -13,8 +13,9 @@ FLAT_SECTIONS = ["libdefaults", "domain_realm", # krb5.conf
                  "kdcdefaults", "dbdefaults", "dbmodules", "logging"] # kdc
 ALL_SECTIONS = STANZA_SECTIONS + FLAT_SECTIONS
 
-NONBROKEN_ENCTYPES = [
-    "des3-cbc-sha1", "des3-hmac-sha1", "des3-cbc-sha1-kd",
+# Ideally this wouldn't have rc4 on it, but that's not the world we live in
+# ... yet.
+ACCEPTED_ENCTYPES = [
     "aes256-cts-hmac-sha1-96", "aes256-cts", "aes256-sha1",
     "aes128-cts-hmac-sha1-96", "aes128-cts", "aes128-sha1",
     "aes256-cts-hmac-sha384-192", "aes256-sha2",
@@ -22,7 +23,7 @@ NONBROKEN_ENCTYPES = [
     "arcfour-hmac", "rc4-hmac", "arcfour-hmac-md5",
     "camellia256-cts-cmac", "camellia256-cts",
     "camellia128-cts-cmac", "camellia128-cts",
-    "des3", "aes", "rc4", "camellia"
+    "aes", "rc4", "camellia"
 ]
 
 min_ver = None
@@ -200,7 +201,7 @@ def check(secs):
     if permitted_enctypes is None:
         error("permitted_enctypes not specified", "libdefaults")
     for enctype in permitted_enctypes.split():
-        if enctype not in NONBROKEN_ENCTYPES:
+        if enctype not in ACCEPTED_ENCTYPES:
             error("bad enctype: " + enctype, "libdefaults")
         if krb5_min_ver() < 15 and \
            enctype in ["aes256-cts-hmac-sha384-192", "aes256-sha2",
