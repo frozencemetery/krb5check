@@ -1,10 +1,11 @@
 #!/usr/bin/python3
 
-from collections import defaultdict
-import re
 import os
+import re
 import subprocess
 import sys
+
+from collections import defaultdict
 
 STANZA_SECTIONS = ["realms", "capaths", "appdefaults", "plugins", # krb5.conf
                    "dbmodules"] # kdc
@@ -28,18 +29,17 @@ min_ver = None
 
 def error(s, prefix):
     print("%s: %s" % (prefix, s), file=sys.stderr)
-    return exit(1)
+    exit(1)
 
 def by_section(lines, prefix):
     secs = {}
 
     while len(lines) > 0:
         m = re.match(r"\[(.*)\]", lines[0])
-        if m == None or m.group(1) not in ALL_SECTIONS:
-            return error("malformed/missing section header: " +lines[0],
-                         prefix)
+        if m is None or m.group(1) not in ALL_SECTIONS:
+            error("malformed/missing section header: " + lines[0], prefix)
         elif m.group(1) in secs.keys():
-            return error("duplicate section header: " + m.group(1), prefix)
+            error("duplicate section header: " + m.group(1), prefix)
 
         values = []
         del(lines[0])
@@ -47,12 +47,9 @@ def by_section(lines, prefix):
         while len(lines) > 0 and not lines[0].startswith('['):
             values.append(lines[0])
             del(lines[0])
-            pass
         if len(values) != 0:
             secs[m.group(1)] = values
-            pass
 
-        continue
     return secs
 
 def merge(parent, child, prefix):
@@ -62,7 +59,7 @@ def merge(parent, child, prefix):
             continue
 
         parent[sec] += child[sec]
-        pass
+
     return parent
 
 def get_clean_contents(f, prefix=None):
@@ -70,9 +67,8 @@ def get_clean_contents(f, prefix=None):
 
     try:
         data = open(f, "r").read()
-        pass
     except Exception as e:
-        return error(e, prefix)
+        error(e, prefix)
 
     lines = data.replace("\r\n", "\n").split("\n")
     lines = [line.strip() for line in lines
@@ -80,64 +76,59 @@ def get_clean_contents(f, prefix=None):
 
     extra = []
     while lines[0].startswith("include"):
-        m = re.match("(include|includedir)\s+(.*)", lines[0])
+        m = re.match(r"(include|includedir)\s+(.*)", lines[0])
         verb = m.group(1)
         path = m.group(2).strip()
 
         if verb == "include":
             extra.append(get_clean_contents(path, prefix))
-            pass
         elif verb == "includedir":
             for nf in os.listdir(path):
                 if not nf.endswith(".conf") \
                    and re.search("[^a-zA-Z0-9_-]", nf) is not None:
-                    return error("file ignored by libkrb5: " + nf, prefix)
+                    error("file ignored by libkrb5: " + nf, prefix)
 
                 nf = os.path.join(path, nf)
                 extra.append(get_clean_contents(nf, prefix))
-                pass
-            pass
+
         else:
-            return error("unrecognized include directive: " + verb, prefix)
+            error("unrecognized include directive: " + verb, prefix)
 
         del(lines[0])
-        pass
 
     secs = by_section(lines, prefix)
     for d in extra:
         secs = merge(secs, d, prefix)
-        pass
     return secs
 
 def first_level(lines):
     tup_list = []
     for line in lines:
-        m = re.match("(.*?)\s*=\s*(.*)", line)
+        m = re.match(r"(.*?)\s*=\s*(.*)", line)
         if m is None:
-            return error("malformed assignment: " + line, "(parsing)")
+            error("malformed assignment: " + line, "(parsing)")
 
         tup_list.append((m.group(1), m.group(2)))
-        pass
+
     return tup_list
 
 def second_level(lines):
     secs = {}
 
     while len(lines) > 0:
-        m = re.match("(.*?)\s*=\s*{", lines[0])
+        m = re.match(r"(.*?)\s*=\s*{", lines[0])
         if m is None:
-            return error("malformed stanza: " + lines[0], "(parsing)")
+            error("malformed stanza: " + lines[0], "(parsing)")
 
         del(lines[0])
         attrs = []
         while lines[0] != "}":
             attrs.append(lines[0])
             del(lines[0])
-            pass
 
         secs[m.group(1)] = to_dict(first_level(attrs), True)
         del(lines[0])
-        pass
+
     return secs
 
 def to_dict(tuplist, dups_okay=False):
@@ -149,9 +140,9 @@ def to_dict(tuplist, dups_okay=False):
             continue
         elif k in d:
             print(tuplist)
-            return error("duplicate assignment: " + k, "(parsing)")
+            error("duplicate assignment: " + k, "(parsing)")
+
         d[k] = v
-        pass
 
     # convert to regular dict for display purposes
     return dict(d)
@@ -163,12 +154,12 @@ def parse(f):
             sections[s] = second_level(sections[s])
             continue
         sections[s] = to_dict(first_level(sections[s]))
-        pass
+
     return sections
 
 def krb5_min_ver():
     global min_ver
-    if min_ver != None:
+    if min_ver is not None:
         return min_ver
 
     # Try krb5-config
@@ -198,35 +189,31 @@ def krb5_min_ver():
         min_ver = int(res.split("-")[0].split(".")[1]) # 1.15-3, e.g.
         return min_ver
 
-    return error("Couldn't get krb5 version!", "(internal)")
+    error("Couldn't get krb5 version!", "(internal)")
 
 def check(secs):
     libdefaults = secs.get("libdefaults")
     if libdefaults is None:
-        return error("missing libdefaults section", "(checks)")
+        error("missing libdefaults section", "(checks)")
 
     permitted_enctypes = libdefaults.get("permitted_enctypes")
     if permitted_enctypes is None:
-        return error("permitted_enctypes not specified", "libdefaults")
+        error("permitted_enctypes not specified", "libdefaults")
     for enctype in permitted_enctypes.split():
         if enctype not in NONBROKEN_ENCTYPES:
-            return error("bad enctype: " + enctype, "libdefaults")
+            error("bad enctype: " + enctype, "libdefaults")
         if krb5_min_ver() < 15 and \
            enctype in ["aes256-cts-hmac-sha384-192", "aes256-sha2",
                        "aes128-cts-hmac-sha256-128", "aes128-sha2"]:
-            return error("enctype too new: " + enctype, "libdefaults")
-        continue
+            error("enctype too new: " + enctype, "libdefaults")
 
     pkinit_dh_min_bits = libdefaults.get("pkinit_dh_min_bits")
     if pkinit_dh_min_bits is not None:
         pkinit_dh_min_bits = int(pkinit_dh_min_bits)
         if pkinit_dh_min_bits < 2048:
-            return error("pkinit_dh_min_bits set lower than default",
-                         "libdefaults")
+            error("pkinit_dh_min_bits set lower than default", "libdefaults")
         elif pkinit_dh_min_bits % 2048 != 0:
-            return error("bad value for pkinit_dh_min_bits", "libdefaults")
-        pass
-    return
+            error("bad value for pkinit_dh_min_bits", "libdefaults")
 
 def pretty_print(secs):
     for sec in secs.keys():
@@ -236,7 +223,6 @@ def pretty_print(secs):
             flat = secs[sec]
             for left in sorted(flat.keys()):
                 print("    %s = %s" % (left, flat[left]))
-                pass
             print("")
             continue
 
@@ -248,15 +234,10 @@ def pretty_print(secs):
             for left in sorted(blocks[header].keys()):
                 for right in stanza[left]:
                     print("        %s = %s" % (left, right))
-                    pass
-                pass
 
             print("    }")
-            pass
 
         print("")
-        pass
-    return
 
 ######
 
@@ -274,5 +255,3 @@ if __name__ == "__main__":
         out = parse(f)
         check(out)
         pretty_print(out)
-        pass
-    exit(0)
