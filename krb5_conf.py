@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+
+# This is used in crypto-policies's test suite.  Before making changes, be
+# sure it won't break them.
+
 import os
 import re
 import subprocess
