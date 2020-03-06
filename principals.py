@@ -5,7 +5,6 @@ import subprocess
 from typing import List, Optional, Tuple
 
 # TODO handle multiple kvno like, at all
-# TODO fix this to always use kadmin.local -q
 
 def get_output(cmd: str) -> str:
     res = subprocess.check_output(cmd, shell=True)
@@ -13,7 +12,7 @@ def get_output(cmd: str) -> str:
     return decoded.strip()
 
 def kl(command: str) -> str:
-    return get_output("kadmin.local " + command)
+    return get_output("kadmin.local -q '" + command + "'")
 
 # This has the bonus of catching deprecated keysalt types because non-v5 is
 # appended where relevant.
@@ -145,7 +144,7 @@ if __name__ == "__main__":
     print("Hello!  Remember to back up your KDC before making changes.\n")
     # TODO maybe some info about the stuff we warn about and why?
 
-    princs = kl("-q listprincs").split('\n')
+    princs = kl("listprincs").split('\n')
     if not princs[0].startswith("Authenticating as principal "):
         print("Error: couldn't list principals!")
         exit(-1)
