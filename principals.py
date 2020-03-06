@@ -2,7 +2,10 @@
 
 import subprocess
 
-from typing import Any, List, Tuple
+from typing import List, Optional, Tuple
+
+# TODO handle multiple kvno like, at all
+# TODO fix this to always use kadmin.local -q
 
 def get_output(cmd: str) -> str:
     res = subprocess.check_output(cmd, shell=True)
@@ -19,7 +22,7 @@ goodlist = set(["aes256-cts-hmac-sha384-192", "aes256-cts-hmac-sha1-96",
                 "camellia256-cts-cmac", "camellia128-cts-cmac"])
 def partition_etypes(princ: str) -> Tuple[List[str], List[str]]:
     princlist = kl("getprinc " + princ).split("\n")
-    etypes = [l.rsplit(" ")[-1] for l in princlist \
+    etypes = [l.rsplit(" ")[-1] for l in princlist
               if l.startswith("Key: vno ")]
     goods = []
     bads = []
@@ -30,9 +33,25 @@ def partition_etypes(princ: str) -> Tuple[List[str], List[str]]:
         bads.append(e)
     return goods, bads
 
-def handle_krbtgt() -> None:
-    # TODO
-    return
+def handle_krbtgt(krbtgt: Optional[str]) -> None:
+    if krbtgt is None:
+        print("No krbtgt found; failing!")
+        exit(-1)
+
+    good, bad = partition_etypes(krbtgt)
+    if len(good) == 0:
+        print("! krbtgt " + krbtgt + " has no good enctypes!")
+        print("! It needs to be reissued.  To do this, first: ")
+        print('!     kadmin.local -q "cpw -rankdkey -keepold ' + krbtgt + '"')
+        print("! (Propogate the new key to any replicas.)")
+        print("! Wait until all current TGTs expire (typically 1d).  Then:")
+        print("!     kadmin.local -q purgekeys")
+        print("")
+    elif len(bad) != 0:
+        print("- krbtgt " + krbtgt + " supports some bad enctypes.")
+        print("- This is only a problem if your machines do not mandate")
+        print("- good encryption types.")
+        print("")
 
 def handle_cross_realm() -> None:
     # TODO
@@ -53,7 +72,7 @@ def handle_km() -> None:
     print("!     kdb5_util update_princ_encryption # will prompt")
     print("!     kdb5_util purge_mkeys")
     print("")
-    
+
 def handle_users(users: List[str]) -> None:
     # Handle users
     nogood = []
@@ -113,12 +132,16 @@ if __name__ == "__main__":
         exit(-1)
 
     del(princs[0])
-
+    krbtgt = None
     users = []
     services = []
     for p in princs:
         short, realm = p.rsplit("@", 1)
         if short == "K/M":
+            continue
+        elif short.startswith("krbtgt/"):
+            # TODO this doesn't handle cross-realm yet
+            krbtgt = p
             continue
         elif "/" not in short:
             users.append(p)
@@ -126,7 +149,7 @@ if __name__ == "__main__":
 
         services.append(p)
 
-    handle_krbtgt()
+    handle_krbtgt(krbtgt)
     handle_cross_realm()
     handle_km()
     handle_users(users)
