@@ -52,6 +52,8 @@ def handle_krbtgt(krbtgt: Optional[str]) -> None:
         print("- This is only a problem if your machines do not mandate")
         print("- good encryption types.")
         print("")
+    else:
+        print("(krbtgt looks okay)")
 
 def handle_cross_realm(croses: List[str]) -> None:
     need_updated = []
@@ -61,6 +63,7 @@ def handle_cross_realm(croses: List[str]) -> None:
             need_updated.append(cross)
 
     if len(need_updated) == 0:
+        print("(cross-realm principals look okay)")
         return
 
     print("! These cross-realm relationships rely on weak encryption:")
@@ -109,6 +112,8 @@ def handle_users(users: List[str]) -> None:
         print("- This is only a problem if your machines do not mandate")
         print("- good encryption types")
         print("")
+    if len(nogood) == 0 and len(havebad) == 0:
+        print("(users look okay)")
 
 def handle_services(services: List[str]) -> None:
     nogood = []
@@ -133,6 +138,8 @@ def handle_services(services: List[str]) -> None:
         print("- This is only a problem if your machines do not mandate")
         print("- good encryption types")
         print("")
+    if len(nogood) == 0 and len(havebad) == 0:
+        print("(services look okay)")
 
 if __name__ == "__main__":
     print("Hello!  Remember to back up your KDC before making changes.\n")
