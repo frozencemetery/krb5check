@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-
 # This is used in crypto-policies's test suite.  Before making changes, be
 # sure it won't break them.
 
@@ -196,7 +195,7 @@ def krb5_min_ver():
 
     error("Couldn't get krb5 version!", "(internal)")
 
-def check(secs):
+def check(secs, accepted):
     libdefaults = secs.get("libdefaults")
     if libdefaults is None:
         error("missing libdefaults section", "(checks)")
@@ -205,7 +204,7 @@ def check(secs):
     if permitted_enctypes is None:
         error("permitted_enctypes not specified", "libdefaults")
     for enctype in permitted_enctypes.split():
-        if enctype not in ACCEPTED_ENCTYPES:
+        if enctype not in accepted:
             error("bad enctype: " + enctype, "libdefaults")
         if krb5_min_ver() < 15 and \
            enctype in ["aes256-cts-hmac-sha384-192", "aes256-sha2",
@@ -258,5 +257,5 @@ if __name__ == "__main__":
 
     for f in files:
         out = parse(f)
-        check(out)
+        check(out, ACCEPTED_ENCTYPES)
         pretty_print(out)
