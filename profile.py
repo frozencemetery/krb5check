@@ -59,10 +59,12 @@ profile_t = ctypes.POINTER(_profile_t)
 iter_p = ctypes.c_void_p
 krb5_error = ctypes.c_int32
 
-krb5_init_context = LIBKRB5.krb5_init_context
-krb5_init_context.argtypes = (ctypes.POINTER(krb5_context), )
-krb5_init_context.restype = krb5_error
-krb5_init_context.errcheck = krb5_errcheck
+krb5_init_context_profile = LIBKRB5.krb5_init_context_profile
+krb5_init_context_profile.argtypes = (profile_t,
+                                      ctypes.c_int,
+                                      ctypes.POINTER(krb5_context))
+krb5_init_context_profile.restype = krb5_error
+krb5_init_context_profile.errcheck = krb5_errcheck
 
 krb5_free_context = LIBKRB5.krb5_free_context
 krb5_free_context.argtypes = (krb5_context, )
@@ -157,10 +159,11 @@ class KRB5Profile:
         if not PY3:
             next = __next__
 
-    def __init__(self):
+    def __init__(self, kdc=False):
         self.__context = self.__profile = None
         context = krb5_context()
-        krb5_init_context(ctypes.byref(context))
+        krb5_init_context_profile(None, 2 if kdc else 0,
+                                  ctypes.byref(context))
         self.__context = context
         profile = profile_t()
         krb5_get_profile(context, ctypes.byref(profile))
