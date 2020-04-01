@@ -33,7 +33,7 @@ et_no_rhel8 = set(["des/crc32", "des/md4", "des/md5", "des/raw",
 et_broken = et_no_rhel8.union(["rc4/md5", "rc4/export"])
 
 salts = set(["normal", "v4", "norealm", "onlyrealm", "afs3", "special"])
-okay_salts = set(["normal"])
+salt_no_rhel8 = set(["v4", "afs3"])
 
 def canonicalize_et(raw: Union[str, bytes]) -> Set[str]:
     ret = set()
@@ -97,3 +97,19 @@ def check_etlist(raw: Union[str, bytes], name: str) -> None:
     etlist = canonicalize_etlist(raw)
     warn_if_in(etlist, et_no_rhel8, f"Non-rhel8 enctype(s) in {name}")
     warn_if_in(etlist, et_broken, f"Broken enctype(s) in {name}")
+
+def check_kslist(raw: Union[str, bytes], name: str) -> None:
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8")
+
+    ets, salts = canonicalize_kslist(raw)
+
+    no_rhel8 = salts.intersection(salt_no_rhel8)
+    if len(no_rhel8) > 0:
+        print(f"Non-rhel8 capable salts in {name}: {no_rhel8}")
+    weird = salts.difference(["normal"])
+    if len(weird) > 0:
+        print(f"Abnormal salts in {name}: {weird}")
+
+    warn_if_in(ets, et_no_rhel8, f"Non-rhel8 enctype(s) in {name}")
+    warn_if_in(ets, et_broken, f"Broken enctype(s) in {name}")
