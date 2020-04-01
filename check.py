@@ -47,7 +47,9 @@ def check_client():
     if dh_3:
         dh_min_values.add(int(dh_3))
 
+    # There's enough zero-conf that this is actually okay now.
     realms = prof.section("realms")
+    realms = realms if realms else []
     for realm, config in realms:
         keys = {k for k, _ in config}
         if not keys.isdisjoint(["v4_realm", "v4_instance_convert"]):
@@ -56,12 +58,16 @@ def check_client():
         dh_2 = {int(v) for k, v in config if k == "pkinit_dh_min_bits"}
         dh_min_values.update(dh_2)
 
-    # krb5 doesn't use uppercase for configs, and realms pretty much have to
-    # be uppercase, so this will do for now as a heiuristic.
+    # If libdefaults is empty, there'll be warnings elsewhere, but it's a
+    # valid configuration.
     libdefaults = prof.section("libdefaults")
+    libdefaults = libdefaults if libdefaults else []
     for realm, stanza in libdefaults:
+        # krb5 doesn't use uppercase for configs, and realms pretty much have
+        # to be uppercase, so this will do for now as a heiuristic.
         if not realm.isupper():
             continue
+
         dh_1 = {int(v) for k, v in stanza if k == "pkinit_dh_min_bits"}
         dh_min_values.update(dh_1)
 
@@ -80,6 +86,7 @@ def check_kdc():
     prof = KRB5Profile(kdc=True)
 
     otp = prof.section("otp")
+    otp = otp if otp else []
     for toktype, stanza in otp:
         server = [v for k, v in stanza if k == "server"]
         if len(server) > 0 and server[0][0] != '/':
@@ -92,6 +99,9 @@ def check_kdc():
         dh_min_values.add(int(dh_4))
 
     realms = prof.section("realms")
+    if not realms:
+        raise Exception("No realms found checking KDC configuration")
+
     for realm, stanza in realms:
         has_preauth = False
         for k, v in stanza:
@@ -115,7 +125,6 @@ def check_kdc():
             print(f"Weak value for pkinit_dh_min_bits: {v}")
 
 # TODO: KDC checks for principals
-# TODO: prof.section calls may all be empty
 
 if __name__ == "__main__":
     check_client()
