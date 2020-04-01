@@ -12,6 +12,9 @@ except OSError as e:
     print(f"Caught exception: {e}")
     print(f"Is krb5-libs installed?  (If not: how did you do that?)")
 
+class KRB5Error(Exception):
+    pass
+
 class c_text_p(ctypes.c_char_p):
     """A c_char_p variant that can handle UTF-8 text"""
     @classmethod
