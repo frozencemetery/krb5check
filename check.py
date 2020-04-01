@@ -34,9 +34,36 @@ default_tkt_enctypes = prof.get_string("libdefaults", "default_tkt_enctypes")
 if default_tkt_enctypes:
     check_etlist(default_tkt_enctypes, "default_tkt_enctypes")
 
+# PKINIT-related values can be set in 5 different places - 3 in krb5.conf, and
+# 2 in kdc.conf.
+dh_min_values = set()
+dh_3 = prof.get_string("libdefaults", "pkinit_dh_min_bits")
+if dh_3:
+    dh_min_values.add(int(dh_3))
 
-# TODO: realms->v4_realm, realms->v4_instance_convert?
-# TODO: pkinit_dh_min_bits
+realms = prof.section("realms")
+for realm, config in realms:
+    keys = {k for k, _ in config}
+    if not keys.isdisjoint(["v4_realm", "v4_instance_convert"]):
+        print(f"Kerberos v4 configuration found for {realm}")
+
+    dh_2 = {int(v) for k, v in config if k == "pkinit_dh_min_bits"}
+    dh_min_values.update(dh_2)
+
+# krb5 doesn't use uppercase for configs, and realms pretty much have to be
+# uppercase, so this will do for now as a heiuristic.
+libdefaults = prof.section("libdefaults")
+for realm, stanza in libdefaults:
+    if not realm.isupper():
+        continue
+    dh_1 = {int(v) for k, v in stanza if k == "pkinit_dh_min_bits"}
+    dh_min_values.update(dh_1)
+
+# default is 2048, which is considered fine for now
+for v in dh_min_values:
+    if v < 2048:
+        print(f"Weak value for pkinit_dh_min_bits: {v}")
+
 # TODO: should we do a site-wide crypto-policies check?
 
 # on a KDC, we also need to check:
