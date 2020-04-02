@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 import os
+import re
+import subprocess
 
 from enctypes import check_etlist, check_kslist
 from profile import KRB5Profile
@@ -8,18 +10,13 @@ from profile import KRB5Profile
 # This has been true since 1.14, though man pages don't reflect it
 defkeysalts = "aes256-cts-hmac-sha1-96:normal aes128-cts-hmac-sha1-96:normal"
 
-# Prior to 1.18, this includes 1DES.  It never included 3DES.
+# Prior to 1.18, this includes 1DES.
 defetypes = "aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 aes256-cts-hmac-sha384-192 aes128-cts-hmac-sha256-128 des3-cbc-sha1 arcfour-hmac-md5 camellia256-cts-cmac camellia128-cts-cmac"
 
 # True since 1.11, prior to which it was 3des
 defmkey = "aes256-cts-hmac-sha1-96"
 
-# TODO check krb5 version (delay this).  Right now everything assumes that:
-# 1.14 <= version < 1.18.  This leaves out RHEL6 and the future.
-
-# TODO check crypto-policies and RHEL version (delay this)
-
-def check_client():
+def check_client() -> None:
     prof = KRB5Profile()
 
     allow_weak_crypto = prof.get_bool("libdefaults", "allow_weak_crypto",
@@ -43,7 +40,7 @@ def check_client():
     # PKINIT-related values can be set in five different places - three in
     # krb5.conf, and two in kdc.conf.
     dh_min_values = set()
-    dh_3 = prof.get_string("libdefaults", "pkinit_dh_min_bits")
+    dh_3 = prof.get_integer("libdefaults", "pkinit_dh_min_bits", None, 2048)
     if dh_3:
         dh_min_values.add(int(dh_3))
 
@@ -76,13 +73,17 @@ def check_client():
         if v < 2048:
             print(f"Weak value for pkinit_dh_min_bits: {v}")
 
-def check_kdc():
+def check_kdc(family: str) -> None:
     if os.getuid() != 0:
         raise Exception("You need to be root to read KDC data")
 
     # krb5 has wonky section merging behavior here.  In order to get the KDC's
     # [realms], we need to do this garbage.
-    os.environ["KRB5_CONF"] = "/var/kerberos/krb5kdc/kdc.conf"
+    if family == "Fedora":
+        os.environ["KRB5_CONF"] = "/var/kerberos/krb5kdc/kdc.conf"
+    elif family == "Debian":
+        os.environ["KRB5_CONF"] = "/var/lib/krb5kdc/kdc.conf"
+
     prof = KRB5Profile(kdc=True)
 
     otp = prof.section("otp")
@@ -94,7 +95,7 @@ def check_kdc():
 
     # Two pkinit_dh_min_bits places on the KDC.
     dh_min_values = set()
-    dh_4 = prof.get_string("kdcdefaults", "pkinit_dh_min_bits") # TODO
+    dh_4 = prof.get_integer("kdcdefaults", "pkinit_dh_min_bits", None, 2048)
     if dh_4:
         dh_min_values.add(int(dh_4))
 
@@ -102,6 +103,7 @@ def check_kdc():
     if not realms:
         raise Exception("No realms found checking KDC configuration")
 
+    print(f"{realms}")
     for realm, stanza in realms:
         has_preauth = False
         for k, v in stanza:
@@ -127,5 +129,23 @@ def check_kdc():
 # TODO: KDC checks for principals
 
 if __name__ == "__main__":
+    p = subprocess.run(["dpkg-query", "-W", "libkrb5-3"], capture_output=True)
+    if p.returncode == 0:
+        family = "Debian"
+        minver = re.match(rb"libkrb5-3.*\t1\.([0-9]{1,2})", p.stdout).group(1)
+    else:
+        # TODO check crypto-policies and RHEL version (delay this)
+        family = "Fedora"
+        p = subprocess.run(["rpm", "-qv", "krb5-libs"], capture_output=True)
+        if p.returncode != 0:
+            raise Exception("Couldn't detect OS version")
+
+        minver = re.match(rb"krb5-libs-1\.([0-9]{1,2})", p.stdout).group(1)
+    minver = int(minver)
+    if minver < 14:
+        raise Exception("krb5 < 1.14 not supported")
+    elif minver >= 18:
+        raise Exception("krb5 >= 1.18 not supported (you already upgraded)")
+
     check_client()
-    check_kdc() # TODO flag for this probably
+    check_kdc(family) # TODO flag for this probably
