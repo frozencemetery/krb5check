@@ -103,13 +103,13 @@ def check_kdc(family: str) -> None:
     if not realms:
         raise Exception("No realms found checking KDC configuration")
 
-    print(f"{realms}")
     for realm, stanza in realms:
         has_preauth = False
         for k, v in stanza:
             if k == "supported_enctypes":
                 # default is defkeysalts, so it's okay-ish to not specify
-                check_kslist(v)
+                # TODO check permitted_enctypes - these might not be used
+                check_kslist(v, "supported_enctypes")
             elif k == "pkinit_dh_min_bits":
                 dh_min_values.add(int(v)) # dh_5
             elif k == "master_key_type":
@@ -129,19 +129,22 @@ def check_kdc(family: str) -> None:
 # TODO: KDC checks for principals
 
 if __name__ == "__main__":
-    p = subprocess.run(["dpkg-query", "-W", "libkrb5-3"], capture_output=True)
-    if p.returncode == 0:
-        family = "Debian"
-        minver = re.match(rb"libkrb5-3.*\t1\.([0-9]{1,2})", p.stdout).group(1)
-    else:
+    try:
+        p = subprocess.run(["dpkg-query", "-W", "libkrb5-3"],
+                           capture_output=True)
+        if p.returncode == 0:
+            family = "Debian"
+            minver = re.match(rb"libkrb5-3.*\t1\.([0-9]{1,2})", p.stdout)
+    except FileNotFoundError:
         # TODO check crypto-policies and RHEL version (delay this)
         family = "Fedora"
         p = subprocess.run(["rpm", "-qv", "krb5-libs"], capture_output=True)
         if p.returncode != 0:
             raise Exception("Couldn't detect OS version")
 
-        minver = re.match(rb"krb5-libs-1\.([0-9]{1,2})", p.stdout).group(1)
-    minver = int(minver)
+        minver = re.match(rb"krb5-libs-1\.([0-9]{1,2})", p.stdout)
+
+    minver = int(minver.group(1))
     if minver < 14:
         raise Exception("krb5 < 1.14 not supported")
     elif minver >= 18:
