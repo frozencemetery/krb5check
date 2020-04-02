@@ -108,6 +108,16 @@ profile_get_boolean.argtypes = (profile_t,
 profile_get_boolean.restype = krb5_error
 profile_get_boolean.errcheck = krb5_errcheck
 
+profile_get_integer = LIBKRB5.profile_get_integer
+profile_get_integer.argtypes = (profile_t,
+                                c_text_p,
+                                c_text_p,
+                                c_text_p,
+                                ctypes.c_int,
+                                ctypes.POINTER(ctypes.c_int))
+profile_get_integer.restype = krb5_error
+profile_get_integer.errcheck = krb5_errcheck
+
 profile_get_string = LIBKRB5.profile_get_string
 profile_get_string.argtypes = (profile_t,
                                c_text_p,
@@ -198,6 +208,15 @@ class KRB5Profile:
         profile_get_string(self.__profile,
                            name, subname, subsubname,
                            default, ctypes.byref(val))
+        return val.value
+
+    # No way to distinguish set vs. unset here.  If this is needed, treat as a
+    # string instead.
+    def get_integer(self, name, subname, subsubname, default):
+        val = ctypes.c_int()
+        profile_get_integer(self.__profile,
+                            name, subname, subsubname,
+                            default, ctypes.byref(val))
         return val.value
 
     def section(self, *args):
