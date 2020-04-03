@@ -73,11 +73,55 @@ def check_client() -> None:
         if v < 2048:
             print(f"Weak value for pkinit_dh_min_bits: {v}")
 
-def check_kdc(family: str) -> None:
+def kl(cmd: str) -> str:
+    res = subprocess.check_output(f"kadmin.local -q '{cmd}'", shell=True)
+    decoded = res.decode('utf-8')
+    return decoded.strip().split("\n")[1:]
+
+key_re = re.compile(r"^Key: vno \d+, (.*)$")
+def get_princdata(princ: str) -> str:
+    etlist = []
+    for line in kl(f"getprinc {princ}"):
+        m = key_re.match(line)
+        if m:
+            etlist.append(m.group(1))
+
+    return " ".join(etlist)
+
+tgtre = re.compile(r"krbtgt/(.*)")
+def check_princs(permitted_enctypes: str) -> None:
+    princs = kl("listprincs")
+    for princ in princs:
+        short, myrealm = princ.rsplit("@", 1)
+
+        etlist = get_princdata(princ) # TODO is this secretly a kslist?
+        if short == "K/M":
+            check_etlist(etlist, "the K/M principal (database master key)")
+            continue
+
+        m = tgtre.match(short)
+        if not m:
+            check_etlist(etlist, f"the {short} principal")
+            continue
+
+        destrealm = m.group(1)
+        if destrealm == myrealm:
+            check_etlist(etlist,
+                         "the krbtgt principal (ticket granting service key)")
+            continue
+
+        # cross-realm
+        check_etlist(etlist, f"cross-realm principal for {destrealm}")
+
+def check_kdc() -> str:
     if os.getuid() != 0:
         raise Exception("You need to be root to read KDC data")
 
     prof = KRB5Profile(kdc=True)
+
+    permitted_enctypes = prof.get_string("libdefaults", "permitted_enctypes",
+                                         default=defetypes)
+    check_etlist(permitted_enctypes, "KDC permitted_enctypes")
 
     otp = prof.section("otp")
     otp = otp if otp else []
@@ -126,7 +170,7 @@ def check_kdc(family: str) -> None:
         if v < 2048:
             print(f"Weak value for pkinit_dh_min_bits: {v}")
 
-# TODO: KDC checks for principals
+    check_princs(permitted_enctypes)
 
 if __name__ == "__main__":
     try:
@@ -153,4 +197,4 @@ if __name__ == "__main__":
     #     raise Exception("krb5 >= 1.18 not supported (you already upgraded)")
 
     check_client()
-    check_kdc(family) # TODO flag for this probably
+    check_kdc() # TODO flag for this probably
