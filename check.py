@@ -7,17 +7,19 @@ import subprocess
 from enctypes import check_etlist, check_kslist
 from profile import KRB5Profile
 
-# This has been true since 1.14, though man pages don't reflect it
+from typing import List
+
+# This has been true since 1.14, though man pages don't reflect it.
 defkeysalts = "aes256-cts-hmac-sha1-96:normal aes128-cts-hmac-sha1-96:normal"
 
-# Prior to 1.18, this includes 1DES.
+# Prior to 1.18, this includes 1DES.  This is upstreams, so it includes 3DES.
 defetypes = "aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 aes256-cts-hmac-sha384-192 aes128-cts-hmac-sha256-128 des3-cbc-sha1 arcfour-hmac-md5 camellia256-cts-cmac camellia128-cts-cmac"
 
-# True since 1.11, prior to which it was 3des
+# True since 1.11, prior to which it was 3DES.
 defmkey = "aes256-cts-hmac-sha1-96"
 
 def check_client() -> None:
-    prof = KRB5Profile()
+    prof = KRB5Profile() # type: ignore
 
     allow_weak_crypto = prof.get_bool("libdefaults", "allow_weak_crypto",
                                       default=0)
@@ -73,7 +75,7 @@ def check_client() -> None:
         if v < 2048:
             print(f"Weak value for pkinit_dh_min_bits: {v}")
 
-def kl(cmd: str) -> str:
+def kl(cmd: str) -> List[str]:
     res = subprocess.check_output(f"kadmin.local -q '{cmd}'", shell=True)
     decoded = res.decode('utf-8')
     return decoded.strip().split("\n")[1:]
@@ -113,11 +115,11 @@ def check_princs(permitted_enctypes: str) -> None:
         # cross-realm
         check_etlist(etlist, f"cross-realm principal for {destrealm}")
 
-def check_kdc() -> str:
+def check_kdc() -> None:
     if os.getuid() != 0:
         raise Exception("You need to be root to read KDC data")
 
-    prof = KRB5Profile(kdc=True)
+    prof = KRB5Profile(kdc=True) # type: ignore
 
     permitted_enctypes = prof.get_string("libdefaults", "permitted_enctypes",
                                          default=defetypes)
@@ -159,8 +161,6 @@ def check_kdc() -> str:
                 check_etlist(v, "master_key_type")
             elif k == "default_principal_flags":
                 has_preauth = "+preauth" in v
-            # TODO save K/M name here for later.  If multiple realms are
-            # found, we don't support it.
 
         if not has_preauth:
             print(f"{realm} doesn't set +preauth in default_principal_flags")
