@@ -41,6 +41,12 @@ def canonicalize_et(raw: Union[str, bytes]) -> Set[str]:
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8")
 
+    # Thanks, past me
+    if raw.startswith("UNSUPPORTED:"):
+        raise Exception(f"Unsupported enctype: {raw}")
+    elif raw.startswith("DEPRECATED:"):
+        raw = raw.split(":", 1)[-1]
+
     found = False
     for k, v in et_mapping.items():
         if raw in v:
