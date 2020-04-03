@@ -96,6 +96,11 @@ def warn_if_in(etlist: Set[str], bad: Set[str], error: str) -> None:
     if len(in_bad) > 0:
         print(f"{error}: {in_bad}")
 
+def warn_if_not_in(etlist: Set[str], bad: Set[str], error: str) -> None:
+    in_good = etlist.difference(bad)
+    if len(in_good) == 0:
+        print(f"{error}")
+
 def check_etlist(raw: Union[str, bytes], name: str) -> None:
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8")
@@ -103,6 +108,14 @@ def check_etlist(raw: Union[str, bytes], name: str) -> None:
     etlist = canonicalize_etlist(raw)
     warn_if_in(etlist, et_no_rhel8, f"Non-rhel8 enctype(s) in {name}")
     warn_if_in(etlist, et_broken, f"Broken enctype(s) in {name}")
+
+def ensure_hasgood(raw: Union[str, bytes], name: str) -> None:
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8")
+
+    etlist = canonicalize_etlist(raw)
+    warn_if_not_in(etlist, et_no_rhel8, f"No RHEL-8 enctypes for {name}")
+    warn_if_not_in(etlist, et_broken, f"No non-broken enctypes for {name}")
 
 def check_kslist(raw: Union[str, bytes], name: str) -> None:
     if isinstance(raw, bytes):
