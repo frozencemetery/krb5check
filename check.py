@@ -4,7 +4,7 @@ import os
 import re
 import subprocess
 
-from enctypes import check_etlist, check_kslist
+from enctypes import check_etlist, check_kslist, ensure_hasgood
 from profile import KRB5Profile
 
 from typing import List
@@ -98,22 +98,21 @@ def check_princs(permitted_enctypes: str) -> None:
 
         etlist = get_princdata(princ) # TODO is this secretly a kslist?
         if short == "K/M":
-            check_etlist(etlist, "the K/M principal (database master key)")
+            ensure_hasgood(etlist, "the K/M principal (database master key)")
             continue
 
         m = tgtre.match(short)
         if not m:
-            check_etlist(etlist, f"the {short} principal")
+            ensure_hasgood(etlist, f"the {short} principal")
             continue
 
         destrealm = m.group(1)
-        if destrealm == myrealm:
-            check_etlist(etlist,
-                         "the krbtgt principal (ticket granting service key)")
+        if destrealm != myrealm:
+            ensure_hasgood(etlist, f"cross-realm principal for {destrealm}")
             continue
 
-        # cross-realm
-        check_etlist(etlist, f"cross-realm principal for {destrealm}")
+        ensure_hasgood(etlist,
+                       "the krbtgt principal (ticket granting service key)")
 
 def check_kdc() -> None:
     if os.getuid() != 0:
@@ -145,16 +144,7 @@ def check_kdc() -> None:
     for realm, stanza in realms:
         has_preauth = False
         for k, v in stanza:
-            if k == "supported_enctypes":
-                # TODO this check isn't right.  Actual enctypes that get used
-                # is determined by permitted_enctypes &co., so we should check
-                # that again here.  However, we also do need to check that
-                # *removed* enctypes aren't listed here because then new
-                # principal creation won't work right.
-
-                # default is defkeysalts, so it's okay-ish to not specify
-                check_kslist(v, "supported_enctypes")
-            elif k == "pkinit_dh_min_bits":
+            if k == "pkinit_dh_min_bits":
                 dh_min_values.add(int(v)) # dh_5
             elif k == "master_key_type":
                 # defaults to defmkey, so it's okay to not specify
@@ -197,4 +187,4 @@ if __name__ == "__main__":
     #     raise Exception("krb5 >= 1.18 not supported (you already upgraded)")
 
     check_client()
-    check_kdc() # TODO flag for this probably
+    check_kdc()
