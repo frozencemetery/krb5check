@@ -77,13 +77,6 @@ def check_kdc(family: str) -> None:
     if os.getuid() != 0:
         raise Exception("You need to be root to read KDC data")
 
-    # krb5 has wonky section merging behavior here.  In order to get the KDC's
-    # [realms], we need to do this garbage.
-    if family == "Fedora":
-        os.environ["KRB5_CONF"] = "/var/kerberos/krb5kdc/kdc.conf"
-    elif family == "Debian":
-        os.environ["KRB5_CONF"] = "/var/lib/krb5kdc/kdc.conf"
-
     prof = KRB5Profile(kdc=True)
 
     otp = prof.section("otp")
@@ -107,8 +100,13 @@ def check_kdc(family: str) -> None:
         has_preauth = False
         for k, v in stanza:
             if k == "supported_enctypes":
+                # TODO this check isn't right.  Actual enctypes that get used
+                # is determined by permitted_enctypes &co., so we should check
+                # that again here.  However, we also do need to check that
+                # *removed* enctypes aren't listed here because then new
+                # principal creation won't work right.
+
                 # default is defkeysalts, so it's okay-ish to not specify
-                # TODO check permitted_enctypes - these might not be used
                 check_kslist(v, "supported_enctypes")
             elif k == "pkinit_dh_min_bits":
                 dh_min_values.add(int(v)) # dh_5
@@ -117,6 +115,8 @@ def check_kdc(family: str) -> None:
                 check_etlist(v, "master_key_type")
             elif k == "default_principal_flags":
                 has_preauth = "+preauth" in v
+            # TODO save K/M name here for later.  If multiple realms are
+            # found, we don't support it.
 
         if not has_preauth:
             print(f"{realm} doesn't set +preauth in default_principal_flags")
@@ -134,7 +134,7 @@ if __name__ == "__main__":
                            capture_output=True)
         if p.returncode == 0:
             family = "Debian"
-            minver = re.match(rb"libkrb5-3.*\t1\.([0-9]{1,2})", p.stdout)
+            minverb = re.match(rb"libkrb5-3.*\t1\.([0-9]{1,2})", p.stdout)
     except FileNotFoundError:
         # TODO check crypto-policies and RHEL version (delay this)
         family = "Fedora"
@@ -142,13 +142,15 @@ if __name__ == "__main__":
         if p.returncode != 0:
             raise Exception("Couldn't detect OS version")
 
-        minver = re.match(rb"krb5-libs-1\.([0-9]{1,2})", p.stdout)
+        minverb = re.match(rb"krb5-libs-1\.([0-9]{1,2})", p.stdout)
+    if minverb is None:
+        raise Exception("Couldn't detect krb5 version; is it installed?")
 
-    minver = int(minver.group(1))
+    minver = int(minverb.group(1))
     if minver < 14:
         raise Exception("krb5 < 1.14 not supported")
-    elif minver >= 18:
-        raise Exception("krb5 >= 1.18 not supported (you already upgraded)")
+    # elif minver >= 18:
+    #     raise Exception("krb5 >= 1.18 not supported (you already upgraded)")
 
     check_client()
     check_kdc(family) # TODO flag for this probably
