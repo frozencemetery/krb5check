@@ -164,23 +164,22 @@ def check_kdc() -> None:
 
 if __name__ == "__main__":
     try:
-        p = subprocess.run(["dpkg-query", "-W", "libkrb5-3"],
-                           capture_output=True)
-        if p.returncode == 0:
+        ret, out = subprocess.getstatusoutput("dpkg-query -W libkrb5-3")
+        if ret == 0:
             family = "Debian"
-            minverb = re.match(rb"libkrb5-3.*\t1\.([0-9]{1,2})", p.stdout)
+            minvers = re.match(r"libkrb5-3.*\t1\.([0-9]{1,2})", out)
     except FileNotFoundError:
         # TODO check crypto-policies and RHEL version (delay this)
         family = "Fedora"
-        p = subprocess.run(["rpm", "-qv", "krb5-libs"], capture_output=True)
-        if p.returncode != 0:
+        ret, out = subprocess.getstatusoutput("rpm -qv krb5-libs")
+        if ret != 0:
             raise Exception("Couldn't detect OS version")
 
-        minverb = re.match(rb"krb5-libs-1\.([0-9]{1,2})", p.stdout)
-    if minverb is None:
+        minvers = re.match(r"krb5-libs-1\.([0-9]{1,2})", out)
+    if minvers is None:
         raise Exception("Couldn't detect krb5 version; is it installed?")
 
-    minver = int(minverb.group(1))
+    minver = int(minvers.group(1))
     if minver < 14:
         raise Exception("krb5 < 1.14 not supported")
     # elif minver >= 18:
