@@ -23,7 +23,7 @@ class c_text_p(ctypes.c_char_p):
             return None
         if PY3 and isinstance(value, str):
             return value.encode('utf-8')
-        elif not PY3 and isinstance(value, unicode):
+        elif not PY3 and isinstance(value, unicode): # noqa: F821
             return value.encode('utf-8')
         elif not isinstance(value, bytes):
             raise TypeError(value)

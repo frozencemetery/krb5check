@@ -4,7 +4,7 @@ import os
 import re
 import subprocess
 
-from enctypes import check_etlist, check_kslist, ensure_hasgood
+from enctypes import check_etlist, ensure_hasgood
 from profile import KRB5Profile
 
 from typing import List
@@ -13,7 +13,11 @@ from typing import List
 defkeysalts = "aes256-cts-hmac-sha1-96:normal aes128-cts-hmac-sha1-96:normal"
 
 # Prior to 1.18, this includes 1DES.  This is upstreams, so it includes 3DES.
-defetypes = "aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 aes256-cts-hmac-sha384-192 aes128-cts-hmac-sha256-128 des3-cbc-sha1 arcfour-hmac-md5 camellia256-cts-cmac camellia128-cts-cmac"
+defetypes = " ".join(["aes256-cts-hmac-sha1-96", "aes128-cts-hmac-sha1-96",
+                      "aes256-cts-hmac-sha384-192",
+                      "aes128-cts-hmac-sha256-128", "des3-cbc-sha1",
+                      "arcfour-hmac-md5", "camellia256-cts-cmac",
+                      "camellia128-cts-cmac"])
 
 # True since 1.11, prior to which it was 3DES.
 defmkey = "aes256-cts-hmac-sha1-96"
