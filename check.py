@@ -163,12 +163,11 @@ def check_kdc() -> None:
     check_princs(permitted_enctypes)
 
 if __name__ == "__main__":
-    try:
-        ret, out = subprocess.getstatusoutput("dpkg-query -W libkrb5-3")
-        if ret == 0:
-            family = "Debian"
-            minvers = re.match(r"libkrb5-3.*\t1\.([0-9]{1,2})", out)
-    except FileNotFoundError:
+    ret, out = subprocess.getstatusoutput("dpkg-query -W libkrb5-3")
+    if ret == 0:
+        family = "Debian"
+        minvers = re.match(r"libkrb5-3.*\t1\.([0-9]{1,2})", out)
+    else:
         # TODO check crypto-policies and RHEL version (delay this)
         family = "Fedora"
         ret, out = subprocess.getstatusoutput("rpm -qv krb5-libs")
@@ -176,6 +175,7 @@ if __name__ == "__main__":
             raise Exception("Couldn't detect OS version")
 
         minvers = re.match(r"krb5-libs-1\.([0-9]{1,2})", out)
+
     if minvers is None:
         raise Exception("Couldn't detect krb5 version; is it installed?")
 
