@@ -9,6 +9,7 @@ et_mapping = {
     "des/crc32": set(["des-cbc-crc", "des"]),
     "des/md4": set(["des-cbc-md4", "des"]),
     "des/md5": set(["des-cbc-md5", "des"]),
+    "des/sha1": set(["des-hmac-sha1"]),
     "des/raw": set(["des-cbc-raw"]),
     "des3/raw": set(["des3-cbc-raw"]),
     "des3/sha1": set(["des3-cbc-sha1", "des3-hmac-sha1", "des3-cbc-sha1-kd",
@@ -28,7 +29,7 @@ et_mapping = {
                          "camellia"]),
 }
 
-et_no_rhel8 = set(["des/crc32", "des/md4", "des/md5", "des/raw",
+et_no_rhel8 = set(["des/crc32", "des/md4", "des/md5", "des/raw", "des/sha1",
                    "des3/raw", "des3/sha1"])
 et_broken = et_no_rhel8.union(["rc4/md5", "rc4/export"])
 
