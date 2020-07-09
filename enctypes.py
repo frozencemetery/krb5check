@@ -95,7 +95,7 @@ def canonicalize_kslist(raw: Union[str, bytes]) -> Tuple[Set[str], Set[str]]:
 def warn_if_in(etlist: Set[str], bad: Set[str], error: str) -> None:
     in_bad = etlist.intersection(bad)
     if len(in_bad) > 0:
-        print(f"{error}: {in_bad}")
+        print(f"{error}: {sorted(in_bad)}")
 
 def warn_if_not_in(etlist: Set[str], bad: Set[str], error: str) -> None:
     in_good = etlist.difference(bad)
@@ -126,10 +126,10 @@ def check_kslist(raw: Union[str, bytes], name: str) -> None:
 
     no_rhel8 = salts.intersection(salt_no_rhel8)
     if len(no_rhel8) > 0:
-        print(f"Non-rhel8 capable salts in {name}: {no_rhel8}")
+        print(f"Non-rhel8 capable salts in {name}: {sorted(no_rhel8)}")
     weird = salts.difference(["normal"])
     if len(weird) > 0:
-        print(f"Abnormal salts in {name}: {weird}")
+        print(f"Abnormal salts in {name}: {sorted(weird)}")
 
     warn_if_in(ets, et_no_rhel8, f"Non-rhel8 enctype(s) in {name}")
     warn_if_in(ets, et_broken, f"Broken enctype(s) in {name}")
