@@ -24,5 +24,14 @@
                 { "run": "ci/doublecheck.py" },
             ],
         },
+        "el82-standalone": {
+            "runs-on": "ubuntu-latest",
+            "container": "centos:8.2.2004",
+            "steps": [
+                { "uses": "actions/checkout@v2" },
+                { "run": "ci/install-standalone.sh" },
+                { "run": "ci/doublecheck.py" },
+            ],
+        },
     },
 }

@@ -7,14 +7,12 @@ function yi() {
     yum -y --nogpgcheck install $@
 }
 
-# epel for nss_wrapper
-if [ -f /usr/bin/dnf ]; then
-    yi https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-else
+# epel for nss_wrapper in el7
+if [ ! -f /usr/bin/dnf ]; then
     yi https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 fi
 
-yum -y --nogpgcheck install krb5-{server,workstation} nss_wrapper python3
+yi krb5-{server,workstation} nss_wrapper python3 diffutils
 
 echo "127.0.0.1 $h" > hosts
 export NSS_WRAPPER_HOSTS=`pwd`/hosts
