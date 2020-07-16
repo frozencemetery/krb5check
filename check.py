@@ -100,22 +100,22 @@ def check_princs(permitted_enctypes: str) -> None:
     for princ in princs:
         short, myrealm = princ.rsplit("@", 1)
 
-        etlist = get_princdata(princ) # TODO is this secretly a kslist?
+        kslist = get_princdata(princ)
         if short == "K/M":
-            ensure_hasgood(etlist, "the K/M principal (database master key)")
+            ensure_hasgood(kslist, "the K/M principal (database master key)")
             continue
 
         m = tgtre.match(short)
         if not m:
-            ensure_hasgood(etlist, f"the {short} principal")
+            ensure_hasgood(kslist, f"the {short} principal")
             continue
 
         destrealm = m.group(1)
         if destrealm != myrealm:
-            ensure_hasgood(etlist, f"cross-realm principal for {destrealm}")
+            ensure_hasgood(kslist, f"cross-realm principal for {destrealm}")
             continue
 
-        ensure_hasgood(etlist,
+        ensure_hasgood(kslist,
                        "the krbtgt principal (ticket granting service key)")
 
 def check_kdc() -> None:

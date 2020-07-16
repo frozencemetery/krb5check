@@ -36,17 +36,21 @@ et_broken = et_no_rhel8.union(["rc4/md5", "rc4/export"])
 salts = set(["normal", "v4", "norealm", "onlyrealm", "afs3", "special"])
 salt_no_rhel8 = set(["v4", "afs3"])
 
-def canonicalize_et(raw: Union[str, bytes]) -> Set[str]:
-    ret = set()
-
+def strip_deprecated(raw: Union[str, bytes]) -> str:
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8")
 
     # Thanks, past me
     if raw.startswith("UNSUPPORTED:"):
-        raise Exception(f"Unsupported enctype: {raw}")
+        raise Exception(f"Unsupported enctype/keysalt: {raw}")
     elif raw.startswith("DEPRECATED:"):
         raw = raw.split(":", 1)[-1]
+    return raw
+
+def canonicalize_et(raw: Union[str, bytes]) -> Set[str]:
+    ret = set()
+
+    raw = strip_deprecated(raw)
 
     found = False
     for k, v in et_mapping.items():
@@ -79,12 +83,12 @@ def canonicalize_kslist(raw: Union[str, bytes]) -> Tuple[Set[str], Set[str]]:
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8")
     for et in splitre.split(raw):
-        if ":" not in et:
-            raise Exception(f"Invalid kslist {et}")
-
-        et, salt = et.split(":")
-        if salt not in salts:
-            raise Exception(f"Salt {salt} is not recognized by krb5!")
+        salt = "normal"
+        et = strip_deprecated(et)
+        if ":" in et:
+            et, salt = et.split(":")
+            if salt not in salts:
+                raise Exception(f"Salt {salt} is not recognized by krb5!")
 
         keysalts.add(salt)
 
@@ -114,9 +118,10 @@ def ensure_hasgood(raw: Union[str, bytes], name: str) -> None:
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8")
 
-    etlist = canonicalize_etlist(raw)
+    etlist, salts = canonicalize_kslist(raw)
     warn_if_not_in(etlist, et_no_rhel8, f"No RHEL-8 enctypes for {name}")
     warn_if_not_in(etlist, et_broken, f"No non-broken enctypes for {name}")
+    warn_if_not_in(salts, salt_no_rhel8, f"No RHEL-8 salts for {name}")
 
 def check_kslist(raw: Union[str, bytes], name: str) -> None:
     if isinstance(raw, bytes):
