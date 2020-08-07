@@ -28,7 +28,7 @@ def check_client() -> None:
     allow_weak_crypto = prof.get_bool("libdefaults", "allow_weak_crypto",
                                       default=0)
     if allow_weak_crypto:
-        raise Exception("Fatal: allow_weak_crypto is enabled")
+        print("allow_weak_crypto enabled (turns on very broken cryptography)")
 
     permitted_enctypes = prof.get_string("libdefaults", "permitted_enctypes",
                                          default=defetypes)
