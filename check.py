@@ -94,6 +94,19 @@ def get_princdata(princ: str) -> str:
 
     return " ".join(etlist)
 
+def check_crypto_policies() -> None:
+    try:
+        policies = subprocess.check_output(
+            ["update-crypto-policies", "--show"])[:-1]
+    except FileNotFoundError:
+        return
+
+    for policy in policies.split(b":"):
+        if policy == b"AD-SUPPORT":
+            print("RC4 permitted by crypto-policies!")
+        elif policy == b"LEGACY":
+            print("Legacy (broken) algorithms permitted by crypto-policies!")
+
 tgtre = re.compile(r"krbtgt/(.*)")
 def check_princs(permitted_enctypes: str) -> None:
     princs = kl("listprincs")
@@ -186,8 +199,8 @@ if __name__ == "__main__":
     minver = int(minvers.group(1))
     if minver < 14:
         raise Exception("krb5 < 1.14 not supported")
-    # elif minver >= 18:
-    #     raise Exception("krb5 >= 1.18 not supported (you already upgraded)")
+    if minver >= 18 and family == "Fedora":
+        check_crypto_policies()
 
     check_client()
     check_kdc()
