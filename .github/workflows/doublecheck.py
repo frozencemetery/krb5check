@@ -23,7 +23,7 @@ if ret != 0:
     exit(ret)
 
 # Check if it matches the reference
-ret, out = subprocess.getstatusoutput(f"diff -u out ci/outputs/{el}")
+ret, out = subprocess.getstatusoutput(f"diff -u ci/outputs/{el} out")
 if ret != 0:
     print("Output didn't match expectations; diff follows...")
     print(out)
