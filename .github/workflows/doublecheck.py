@@ -17,7 +17,7 @@ if not m:
 el = m.group(1)
 
 # Get the output
-ret, out = subprocess.getstatusoutput("./check.py > out")
+ret, out = subprocess.getstatusoutput("./runme > out")
 if ret != 0:
     print(f"Check failed: {out}")
     exit(ret)
@@ -27,5 +27,6 @@ ret, out = subprocess.getstatusoutput(f"diff -u out ci/outputs/{el}")
 if ret != 0:
     print("Output didn't match expectations; diff follows...")
     print(out)
+    exit(ret)
 
-exit(ret)
+print("All set!")

@@ -3,8 +3,8 @@ krb5check
 
 A collection of scripts for checking the health of Kerberos realms.
 
-check.py
---------
+runme
+-----
 
 Performs sanity checks on a working KDC to check for usable broken
 cryptography and safety of upgrading to RHEL-8.3+ (no DES/3DES).  Includes

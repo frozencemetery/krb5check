@@ -1,0 +1,20 @@
+#!/bin/sh
+
+if [ ! -f /etc/redhat-release ]; then
+    printf "Currently only RHEL and Fedora are supported.\n"
+    printf "Other Linux systems may have different deprecation plans.\n"
+    exit 1
+fi
+
+if [ ! -f /usr/bin/python3 ]; then
+    printf "python3 not found; attempting to install it...\n"
+    sudo yum install python3 || exit 1
+fi
+
+if [ ! -d rsrc ]; then
+    printf "Cloning the entire repository is required\n"
+    exit 1
+fi
+
+cd rsrc
+exec /usr/bin/python3 check.py "$@"
