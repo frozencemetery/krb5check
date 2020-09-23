@@ -42,7 +42,8 @@ splitre = re.compile(r"[, ]+")
 def strip_deprecated(raw: str) -> str:
     # Thanks, past me
     if raw.startswith("UNSUPPORTED:"):
-        raise Exception(f"Unsupported enctype/keysalt: {raw}")
+        print(f"Unsupported enctype/keysalt: {raw}")
+        exit(1)
     elif raw.startswith("DEPRECATED:"):
         raw = raw.split(":", 1)[-1]
     return raw
@@ -56,7 +57,8 @@ def canonicalize_et(raw: str) -> Set[str]:
             found = True
             ret.add(k)
     if not found:
-        raise Exception(f"enctype {raw} is not recognized by krb5!")
+        print(f"enctype {raw} is not recognized by krb5!")
+        exit(1)
 
     return ret
 

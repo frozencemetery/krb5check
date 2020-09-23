@@ -133,7 +133,8 @@ def check_princs(permitted_enctypes: str) -> None:
 
 def check_kdc() -> None:
     if os.getuid() != 0:
-        raise Exception("You need to be root to read KDC data")
+        print("You need to be root to read KDC data")
+        exit(1)
 
     prof = KRB5Profile(kdc=True) # type: ignore
 
@@ -156,7 +157,8 @@ def check_kdc() -> None:
 
     realms = prof.section("realms")
     if not realms:
-        raise Exception("No realms found checking KDC configuration")
+        print("No realms found checking KDC configuration")
+        exit(1)
 
     for realm, stanza in realms:
         has_preauth = False
@@ -180,26 +182,22 @@ def check_kdc() -> None:
     check_princs(permitted_enctypes)
 
 if __name__ == "__main__":
-    ret, out = subprocess.getstatusoutput("dpkg-query -W libkrb5-3")
-    if ret == 0:
-        family = "Debian"
-        minvers = re.match(r"libkrb5-3.*\t1\.([0-9]{1,2})", out)
-    else:
-        # TODO check crypto-policies and RHEL version (delay this)
-        family = "Fedora"
-        ret, out = subprocess.getstatusoutput("rpm -qv krb5-libs")
-        if ret != 0:
-            raise Exception("Couldn't detect OS version")
+    ret, out = subprocess.getstatusoutput("rpm -qv krb5-libs")
+    if ret != 0:
+        print(f"Couldn't detect OS version: {out}")
+        exit(1)
 
-        minvers = re.match(r"krb5-libs-1\.([0-9]{1,2})", out)
+    minvers = re.match(r"krb5-libs-1\.([0-9]{1,2})", out)
 
     if minvers is None:
-        raise Exception("Couldn't detect krb5 version; is it installed?")
+        print("Couldn't detect krb5 version; is it installed?")
+        exit(1)
 
     minver = int(minvers.group(1))
     if minver < 14:
-        raise Exception("krb5 < 1.14 not supported")
-    if minver >= 18 and family == "Fedora":
+        print("krb5 < 1.14 not supported; upgrade and try again")
+        exit(1)
+    if minver >= 18:
         check_crypto_policies()
 
     check_client()
