@@ -103,9 +103,9 @@ def check_crypto_policies() -> None:
 
     for policy in policies.split(b":"):
         if policy == b"AD-SUPPORT":
-            print("RC4 permitted by crypto-policies!")
+            print("RC4 (weak) permitted by crypto-policies!")
         elif policy == b"LEGACY":
-            print("Legacy (broken) algorithms permitted by crypto-policies!")
+            print("Legacy (insecure) algorithms permitted by crypto-policies!")
 
 tgtre = re.compile(r"krbtgt/(.*)")
 def check_princs(permitted_enctypes: str) -> None:

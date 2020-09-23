@@ -78,8 +78,9 @@ def check_etlist(raw: Union[str, bytes], name: str) -> None:
         raw = raw.decode("utf-8")
 
     etlist = canonicalize_etlist(raw)
-    warn_if_in(etlist, et_no_rhel8, f"Non-rhel8 enctype(s) in {name}")
-    warn_if_in(etlist, et_broken, f"Broken enctype(s) in {name}")
+    warn_if_in(etlist, et_no_rhel8,
+               f"Unsupported in RHEL 8 enctype(s) specified in {name}")
+    warn_if_in(etlist, et_broken, f"Insecure enctype(s) specified in {name}")
 
 def all_in(smaller: Set[str], larger: Set[str]) -> bool:
     i = smaller.intersection(larger)
@@ -117,6 +118,6 @@ def ensure_hasgood(raw: Union[str, bytes], name: str) -> None:
             broken += 1
 
     if norhel8 == len(kslist):
-        print(f"No RHEL-8 enctypes for {name}")
+        print(f"No RHEL 8 supported enctypes for {name}")
     if broken == len(kslist):
-        print(f"No non-broken enctypes for {name}")
+        print(f"No secure enctypes for {name}")
