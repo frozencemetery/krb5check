@@ -34,7 +34,12 @@ have been taken to mitigate the risk here:
 
 So I encourage you to read through the code before running it.
 
-Our definition of "broken" is derived from RFCs
+RHEL-8.3+ no longer support DES/3DES as well as the non-default afs3 and v4
+salttypes.  I anticipate that DES removal will be the bigger problem.
+Information on enctype migration can be found in [krb5's enctype
+documentation](https://web.mit.edu/kerberos/krb5-devel/doc/admin/enctypes.html#migrating-away-from-older-encryption-types).
+
+Our definition of "insecure (broken) cryptography" is derived from RFCs
 [6649](https://tools.ietf.org/html/rfc6649) and
 [8429](https://tools.ietf.org/html/rfc8429) - though note that these
 documents, while current at the time they were written, cannot be kept
