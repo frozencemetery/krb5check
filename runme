@@ -7,7 +7,8 @@ if [ ! -f /etc/redhat-release ]; then
 fi
 
 if [ ! -f /usr/bin/python3 ]; then
-    printf "python3 not found; attempting to install it...\n"
+    printf "python3 not found; attempting to install it with sudo...\n"
+    printf "(if this won't work, hit Control-c, install, and re-run.)\n"
     sudo yum install python3 || exit 1
 fi
 

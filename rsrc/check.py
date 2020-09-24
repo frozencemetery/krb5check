@@ -133,8 +133,8 @@ def check_princs(permitted_enctypes: str) -> None:
 
 def check_kdc() -> None:
     if os.getuid() != 0:
-        print("You need to be root to read KDC data")
-        exit(1)
+        print("\nNot running as root; skipping KDC checks!")
+        return
 
     prof = KRB5Profile(kdc=True) # type: ignore
 
