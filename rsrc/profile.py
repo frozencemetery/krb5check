@@ -10,7 +10,7 @@ try:
     LIBKRB5 = ctypes.CDLL("libkrb5.so.3")
 except OSError as e:
     print(f"Caught exception: {e}")
-    print(f"Is krb5-libs installed?  (If not: how did you do that?)")
+    print("Is krb5-libs installed?  (If not: how did you do that?)")
 
 class KRB5Error(Exception):
     pass
