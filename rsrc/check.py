@@ -23,7 +23,7 @@ defetypes = " ".join(["aes256-cts-hmac-sha1-96", "aes128-cts-hmac-sha1-96",
 defmkey = "aes256-cts-hmac-sha1-96"
 
 def check_client() -> None:
-    prof = KRB5Profile() # type: ignore
+    prof = KRB5Profile()
 
     allow_weak_crypto = prof.get_bool("libdefaults", "allow_weak_crypto",
                                       default=0)
@@ -136,7 +136,7 @@ def check_kdc() -> None:
         print("\nNot running as root; skipping KDC checks!")
         return
 
-    prof = KRB5Profile(kdc=True) # type: ignore
+    prof = KRB5Profile(kdc=True)
 
     permitted_enctypes = prof.get_string("libdefaults", "permitted_enctypes",
                                          default=defetypes)
