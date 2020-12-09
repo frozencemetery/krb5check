@@ -50,9 +50,8 @@ def check_client() -> None:
     if dh_3:
         dh_min_values.add(int(dh_3))
 
-    # There's enough zero-conf that this is actually okay now.
+    # There's enough zero-conf that this being empty on the client is okay.
     realms = prof.section("realms")
-    realms = realms if realms else []
     for realm, config in realms:
         keys = {k for k, _ in config}
         if not keys.isdisjoint(["v4_realm", "v4_instance_convert"]):
@@ -64,7 +63,6 @@ def check_client() -> None:
     # If libdefaults is empty, there'll be warnings elsewhere, but it's a
     # valid configuration.
     libdefaults = prof.section("libdefaults")
-    libdefaults = libdefaults if libdefaults else []
     for realm, stanza in libdefaults:
         # krb5 doesn't use uppercase for configs, and realms pretty much have
         # to be uppercase, so this will do for now as a heiuristic.
@@ -143,7 +141,6 @@ def check_kdc() -> None:
     check_etlist(permitted_enctypes, "KDC permitted_enctypes")
 
     otp = prof.section("otp")
-    otp = otp if otp else []
     for toktype, stanza in otp:
         server = [v for k, v in stanza if k == "server"]
         if len(server) > 0 and server[0][0] != '/':
@@ -156,7 +153,7 @@ def check_kdc() -> None:
         dh_min_values.add(int(dh_4))
 
     realms = prof.section("realms")
-    if not realms:
+    if len(realms) == 0:
         print("No realms found checking KDC configuration")
         exit(1)
 
