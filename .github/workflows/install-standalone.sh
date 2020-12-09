@@ -11,9 +11,14 @@ function ap() {
     kadmin.local addprinc -pw $p $@
 }
 
-# epel for nss_wrapper in el7
 if [ ! -f /usr/bin/dnf ]; then
+    # epel for nss_wrapper in el7
     yi https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+else
+    # CentOS infrastructure is wild, I tell you
+    sed -i -e 's/mirrorlist=/#mirrorlist=/g' -e 's/#baseurl=/baseurl=/g' \
+        /etc/yum.repos.d/*.repo
+    echo "8.2.2004" > /etc/yum/vars/releasever
 fi
 
 yi krb5-{server,workstation} nss_wrapper python3 diffutils
